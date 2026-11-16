@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -11,16 +13,28 @@ android {
     defaultConfig {
         applicationId = "com.resttimer.wear"
         minSdk = 30          // Wear OS 3 이상 (갤럭시워치6: Wear OS 4/5)
-        targetSdk = 34
-        versionCode = 2
-        versionName = "1.1"
+        targetSdk = 35       // Google Play: Wear OS 앱은 API 35 이상 필수
+        versionCode = 3
+        versionName = "1.2"
     }
+
+    // Play 업로드 키: rest-timer-watch/keystore.properties (git 에 올리지 않음)
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val uploadSigning = if (keystorePropsFile.exists()) {
+        val props = Properties().apply { keystorePropsFile.inputStream().use { load(it) } }
+        signingConfigs.create("upload") {
+            storeFile = rootProject.file(props.getProperty("storeFile"))
+            storePassword = props.getProperty("storePassword")
+            keyAlias = props.getProperty("keyAlias")
+            keyPassword = props.getProperty("keyPassword")
+        }
+    } else null
 
     buildTypes {
         release {
             isMinifyEnabled = false
-            // 개인 설치용: 별도 키가 없으면 debug 키로 서명
-            signingConfig = signingConfigs.getByName("debug")
+            // 업로드 키가 없으면 개인 설치용으로 debug 키 서명
+            signingConfig = uploadSigning ?: signingConfigs.getByName("debug")
         }
     }
     compileOptions {

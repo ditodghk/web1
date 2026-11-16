@@ -139,6 +139,32 @@ object Notifications {
             .build()
     }
 
+    /**
+     * Android 14+ 에서 Google Play 는 알람·통화 앱이 아니면 전체 화면 알림 권한을 회수할 수 있다.
+     * 권한이 없으면 화면이 꺼진 상태에서 "휴식 끝" 화면이 자동으로 뜨지 않는다 (진동·소리는 정상).
+     */
+    fun canUseFullScreen(context: Context): Boolean =
+        Build.VERSION.SDK_INT < Build.VERSION_CODES.UPSIDE_DOWN_CAKE ||
+            context.getSystemService(NotificationManager::class.java).canUseFullScreenIntent()
+
+    /** 전체 화면 알림 권한 설정 화면 열기. 워치에 해당 화면이 없으면 앱 정보 화면으로. */
+    fun openFullScreenSettings(context: Context) {
+        val uri = android.net.Uri.parse("package:${context.packageName}")
+        val intents = buildList {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+                add(Intent(android.provider.Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT, uri))
+            }
+            add(Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS, uri))
+        }
+        for (i in intents) {
+            try {
+                context.startActivity(i)
+                return
+            } catch (_: Exception) {
+            }
+        }
+    }
+
     fun cancelAlert(context: Context) {
         NotificationManagerCompat.from(context).cancel(ID_ALERT)
     }

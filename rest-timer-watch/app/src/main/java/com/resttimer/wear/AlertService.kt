@@ -40,7 +40,7 @@ class AlertService : Service() {
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         val type = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE)
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE else 0
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_SHORT_SERVICE else 0
         ServiceCompat.startForeground(this, Notifications.ID_ALERT, Notifications.buildAlert(this), type)
 
         stopFeedback()
@@ -85,6 +85,11 @@ class AlertService : Service() {
         tone = null
         vibrator?.cancel()
         vibrator = null
+    }
+
+    /** shortService 시간 제한(약 3분)에 도달하면 시스템이 호출. 알림은 30초면 끝나므로 보통 오지 않음. */
+    override fun onTimeout(startId: Int) {
+        stopSelf()
     }
 
     override fun onDestroy() {

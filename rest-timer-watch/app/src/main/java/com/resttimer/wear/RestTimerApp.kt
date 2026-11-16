@@ -19,6 +19,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -34,6 +35,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.compose.LifecycleEventEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.wear.compose.foundation.lazy.ScalingLazyColumn
 import androidx.wear.compose.foundation.lazy.rememberScalingLazyListState
@@ -265,6 +268,11 @@ private fun AlertScreen(isAmbient: Boolean) {
 @Composable
 private fun SettingsScreen(settings: TimerSettings, onClose: () -> Unit) {
     val listState = rememberScalingLazyListState()
+    val context = LocalContext.current
+    var fullScreenOk by remember { mutableStateOf(Notifications.canUseFullScreen(context)) }
+    LifecycleEventEffect(Lifecycle.Event.ON_RESUME) {
+        fullScreenOk = Notifications.canUseFullScreen(context)
+    }
     ScalingLazyColumn(
         modifier = Modifier.fillMaxSize(),
         state = listState,
@@ -310,6 +318,17 @@ private fun SettingsScreen(settings: TimerSettings, onClose: () -> Unit) {
                 selected = settings.countdownButton == CountdownButtonAction.IGNORE,
                 value = CountdownButtonAction.IGNORE,
             )
+        }
+        if (!fullScreenOk) {
+            item {
+                Chip(
+                    onClick = { Notifications.openFullScreenSettings(context) },
+                    label = { Text("전체 화면 알림 허용") },
+                    secondaryLabel = { Text("화면 꺼짐 중 알림 화면 표시") },
+                    colors = ChipDefaults.secondaryChipColors(),
+                    modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                )
+            }
         }
         item {
             Chip(

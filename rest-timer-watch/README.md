@@ -39,7 +39,9 @@
 ./gradlew assembleRelease     # app/build/outputs/apk/release/app-release.apk
 ./gradlew testDebugUnitTest   # 로직 단위 테스트
 ```
-개인 설치용이라 release 빌드도 debug 키로 서명함 (`app/build.gradle.kts`).
+`./gradlew bundleRelease` 는 Play 업로드용 AAB (`app/build/outputs/bundle/release/app-release.aab`).
+`keystore.properties` + 업로드 키가 있으면 그 키로, 없으면 debug 키로 서명함 (`app/build.gradle.kts`).
+키 파일은 git 에 올리지 않음. Play 등록 절차는 [`store/PLAY_RELEASE.md`](store/PLAY_RELEASE.md).
 
 ## 구조
 

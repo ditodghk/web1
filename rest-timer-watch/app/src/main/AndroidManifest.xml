@@ -7,7 +7,6 @@
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- 정확한 시각에 알림: API 33+ 는 USE_EXACT_ALARM, 31~32 는 SCHEDULE_EXACT_ALARM -->
     <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
@@ -43,13 +42,10 @@
             android:name=".AlarmReceiver"
             android:exported="false" />
 
+        <!-- 알림(진동·소리)은 30초면 끝나므로 3분 제한의 shortService 로 충분 -->
         <service
             android:name=".AlertService"
             android:exported="false"
-            android:foregroundServiceType="specialUse">
-            <property
-                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
-                android:value="Rest timer finished: vibrate and beep until the user dismisses it" />
-        </service>
+            android:foregroundServiceType="shortService" />
     </application>
 </manifest>
