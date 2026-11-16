@@ -14,8 +14,8 @@ android {
         applicationId = "com.resttimer.wear"
         minSdk = 30          // Wear OS 3 이상 (갤럭시워치6: Wear OS 4/5)
         targetSdk = 35       // Google Play: Wear OS 앱은 API 35 이상 필수
-        versionCode = 3
-        versionName = "1.2"
+        versionCode = 4
+        versionName = "1.3"
     }
 
     // Play 업로드 키: rest-timer-watch/keystore.properties (git 에 올리지 않음)
