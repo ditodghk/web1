@@ -80,6 +80,13 @@ object TimerLogic {
     /** 알림 상태가 이 시간보다 오래되면 앱을 다시 열었을 때 대기 화면으로 돌아간다. */
     const val STALE_ALERT_MILLIS = 10 * 60 * 1000L
 
+    /** 운동 모드: 대기 상태로 이 시간이 지나면 자동 종료. */
+    const val SESSION_TIMEOUT_MILLIS = 10 * 60 * 1000L
+
+    /** [sessionEndAtMillis] 가 0 이면 예약된 종료 시각이 없는 것(=만료 아님). */
+    fun isSessionExpired(sessionEndAtMillis: Long, nowMillis: Long): Boolean =
+        sessionEndAtMillis in 1..nowMillis
+
     /** 진동·소리는 이 시간이 지나면 자동으로 멈춘다 (배터리 보호). 화면은 [다시] 를 누를 때까지 유지. */
     const val ALERT_AUTO_STOP_MILLIS = 30_000L
 }

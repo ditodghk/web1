@@ -12,8 +12,8 @@ android {
         applicationId = "com.resttimer.wear"
         minSdk = 30          // Wear OS 3 이상 (갤럭시워치6: Wear OS 4/5)
         targetSdk = 34
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 2
+        versionName = "1.1"
     }
 
     buildTypes {

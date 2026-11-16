@@ -86,6 +86,39 @@ object Notifications {
         }
     }
 
+    /**
+     * 운동 모드 대기 중 표시되는 진행 중 활동. 카운트다운 알림과 같은 ID 를 써서 서로 교체된다.
+     * 이 알림이 있으면 화면이 꺼졌다 켜져도 앱으로 돌아온다.
+     */
+    fun showSession(context: Context) {
+        ensureChannels(context)
+        if (!canPost(context)) return
+        val open = openAppIntent(context)
+        val builder = NotificationCompat.Builder(context, CH_RUNNING)
+            .setSmallIcon(R.drawable.ic_timer)
+            .setContentTitle("운동 중")
+            .setContentText("하단 버튼으로 휴식 시작")
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setCategory(NotificationCompat.CATEGORY_WORKOUT)
+            .setContentIntent(open)
+
+        val status = Status.Builder()
+            .addTemplate("운동 중")
+            .build()
+        OngoingActivity.Builder(context, ID_RUNNING, builder)
+            .setStaticIcon(R.drawable.ic_timer)
+            .setTouchIntent(open)
+            .setStatus(status)
+            .build()
+            .apply(context)
+
+        try {
+            NotificationManagerCompat.from(context).notify(ID_RUNNING, builder.build())
+        } catch (_: SecurityException) {
+        }
+    }
+
     fun cancelRunning(context: Context) {
         NotificationManagerCompat.from(context).cancel(ID_RUNNING)
     }

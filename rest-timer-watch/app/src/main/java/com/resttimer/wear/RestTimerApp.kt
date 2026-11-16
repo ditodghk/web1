@@ -43,6 +43,7 @@ import androidx.wear.compose.material.Chip
 import androidx.wear.compose.material.ChipDefaults
 import androidx.wear.compose.material.CircularProgressIndicator
 import androidx.wear.compose.material.CompactButton
+import androidx.wear.compose.material.CompactChip
 import androidx.wear.compose.material.Icon
 import androidx.wear.compose.material.ListHeader
 import androidx.wear.compose.material.MaterialTheme
@@ -62,9 +63,11 @@ fun RestTimerApp(
     showSettings: Boolean,
     onOpenSettings: () -> Unit,
     onCloseSettings: () -> Unit,
+    onEndWorkout: () -> Unit,
 ) {
     val state by TimerController.state.collectAsStateWithLifecycle()
     val settings by TimerController.settings.collectAsStateWithLifecycle()
+    val sessionActive by TimerController.sessionActive.collectAsStateWithLifecycle()
 
     MaterialTheme {
         Box(Modifier.fillMaxSize().background(Color.Black)) {
@@ -76,7 +79,7 @@ fun RestTimerApp(
                 state is TimerState.Alerting ->
                     AlertScreen(isAmbient)
                 else ->
-                    IdleScreen(settings, isAmbient, onOpenSettings)
+                    IdleScreen(settings, isAmbient, sessionActive, onOpenSettings, onEndWorkout)
             }
         }
     }
@@ -85,7 +88,13 @@ fun RestTimerApp(
 // ---------------- ① 대기 화면 ----------------
 
 @Composable
-private fun IdleScreen(settings: TimerSettings, isAmbient: Boolean, onOpenSettings: () -> Unit) {
+private fun IdleScreen(
+    settings: TimerSettings,
+    isAmbient: Boolean,
+    sessionActive: Boolean,
+    onOpenSettings: () -> Unit,
+    onEndWorkout: () -> Unit,
+) {
     val focus = remember { FocusRequester() }
     var rotaryAccum by remember { mutableFloatStateOf(0f) }
     LaunchedEffect(Unit) { focus.requestFocus() }
@@ -137,16 +146,26 @@ private fun IdleScreen(settings: TimerSettings, isAmbient: Boolean, onOpenSettin
             fontSize = 14.sp,
         )
         if (!isAmbient) {
-            Spacer(Modifier.height(10.dp))
-            CompactButton(
-                onClick = onOpenSettings,
-                colors = ButtonDefaults.secondaryButtonColors(),
-            ) {
-                Icon(
-                    painterResource(R.drawable.ic_settings),
-                    contentDescription = "설정",
-                    modifier = Modifier.size(18.dp),
-                )
+            Spacer(Modifier.height(8.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CompactButton(
+                    onClick = onOpenSettings,
+                    colors = ButtonDefaults.secondaryButtonColors(),
+                ) {
+                    Icon(
+                        painterResource(R.drawable.ic_settings),
+                        contentDescription = "설정",
+                        modifier = Modifier.size(18.dp),
+                    )
+                }
+                if (sessionActive) {
+                    Spacer(Modifier.width(4.dp))
+                    CompactChip(
+                        onClick = onEndWorkout,
+                        label = { Text("운동 종료", fontSize = 12.sp) },
+                        colors = ChipDefaults.secondaryChipColors(),
+                    )
+                }
             }
         }
     }

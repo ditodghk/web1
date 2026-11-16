@@ -66,6 +66,11 @@ class MainActivity : ComponentActivity() {
                 showSettings = showSettings,
                 onOpenSettings = { showSettings = true },
                 onCloseSettings = { showSettings = false },
+                onEndWorkout = {
+                    // 운동 모드를 끝내고 앱을 닫아 워치페이스로 돌아간다
+                    TimerController.endSession(this)
+                    finishAndRemoveTask()
+                },
             )
         }
     }

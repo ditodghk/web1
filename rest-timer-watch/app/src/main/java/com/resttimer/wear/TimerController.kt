@@ -25,6 +25,8 @@ object TimerController {
     private const val K_END_AT = "end_at"
     private const val K_TOTAL = "total"
     private const val K_ALERT_SINCE = "alert_since"
+    private const val K_SESSION = "session_active"
+    private const val K_SESSION_END_AT = "session_end_at"
 
     private const val STATE_IDLE = "idle"
     private const val STATE_RUNNING = "running"
@@ -32,6 +34,7 @@ object TimerController {
 
     private const val RC_ALARM = 100
     private const val RC_SHOW = 101
+    private const val RC_SESSION_TIMEOUT = 102
     private const val RESTORE_GRACE_MILLIS = 60_000L
 
     private lateinit var prefs: SharedPreferences
@@ -41,6 +44,14 @@ object TimerController {
 
     private val _settings = MutableStateFlow(TimerSettings())
     val settings: StateFlow<TimerSettings> = _settings.asStateFlow()
+
+    /**
+     * 운동 모드: 타이머를 한 번 시작하면 켜지고, 대기/알림 상태에서도 진행 중 활동(Ongoing Activity)을
+     * 유지해 화면이 꺼졌다 켜져도 워치페이스가 아니라 앱으로 돌아오게 한다.
+     * 대기 상태로 10분이 지나거나 [운동 종료] 를 누르면 끝난다.
+     */
+    private val _sessionActive = MutableStateFlow(false)
+    val sessionActive: StateFlow<Boolean> = _sessionActive.asStateFlow()
 
     @Synchronized
     fun init(context: Context) {
@@ -69,7 +80,13 @@ object TimerController {
             STATE_ALERTING -> TimerState.Alerting(prefs.getLong(K_ALERT_SINCE, now))
             else -> TimerState.Idle
         }
+        _sessionActive.value = prefs.getBoolean(K_SESSION, false)
         dropStaleAlert()
+        // 운동 모드인데 대기 상태이고 자동 종료 시각이 지났거나 없으면 정리
+        val sessionEndAt = prefs.getLong(K_SESSION_END_AT, 0)
+        if (_sessionActive.value && _state.value !is TimerState.Running &&
+            (sessionEndAt == 0L || TimerLogic.isSessionExpired(sessionEndAt, now))
+        ) endSession(context.applicationContext)
     }
 
     // ---------- 설정 ----------
@@ -103,6 +120,9 @@ object TimerController {
 
     /** 타이머 시작 (실행 중이면 처음부터 다시 시작). */
     fun start(context: Context) {
+        setSession(true)
+        cancelSessionTimeout(context)
+        prefs.edit().putLong(K_SESSION_END_AT, 0).apply()
         val total = _settings.value.restSeconds * 1000L
         val endAt = System.currentTimeMillis() + total
         _state.value = TimerState.Running(endAt, total)
@@ -118,8 +138,8 @@ object TimerController {
     /** 카운트다운 취소 (길게 누르기). */
     fun cancel(context: Context) {
         cancelAlarm(context)
-        Notifications.cancelRunning(context)
         toIdle()
+        keepSessionAlive(context)
     }
 
     /** 0초 도달. AlarmReceiver 와 화면 양쪽에서 불릴 수 있으므로 한 번만 처리. */
@@ -133,7 +153,7 @@ object TimerController {
             .putLong(K_ALERT_SINCE, now)
             .apply()
         cancelAlarm(context)
-        Notifications.cancelRunning(context)
+        keepSessionAlive(context)
         AlertService.start(context)
     }
 
@@ -142,6 +162,57 @@ object TimerController {
         AlertService.stop(context)
         Notifications.cancelAlert(context)
         toIdle()
+        keepSessionAlive(context)
+    }
+
+    // ---------- 운동 모드 ----------
+
+    /** 대기/알림 상태에서 운동 모드를 유지하고, 10분 뒤 자동 종료를 예약한다. */
+    private fun keepSessionAlive(context: Context) {
+        if (!_sessionActive.value) {
+            Notifications.cancelRunning(context)
+            return
+        }
+        val endAt = System.currentTimeMillis() + TimerLogic.SESSION_TIMEOUT_MILLIS
+        prefs.edit().putLong(K_SESSION_END_AT, endAt).apply()
+        Notifications.showSession(context)
+        context.getSystemService(AlarmManager::class.java)
+            .setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, endAt, sessionTimeoutIntent(context))
+    }
+
+    /** [운동 종료] 버튼 또는 10분 자동 종료. */
+    fun endSession(context: Context) {
+        cancelSessionTimeout(context)
+        if (_state.value is TimerState.Running) cancelAlarm(context)
+        if (_state.value !is TimerState.Idle) {
+            AlertService.stop(context)
+            Notifications.cancelAlert(context)
+            toIdle()
+        }
+        Notifications.cancelRunning(context)
+        setSession(false)
+    }
+
+    /** 자동 종료 알람이 울렸을 때. 그사이 타이머를 다시 시작했다면 무시. */
+    fun onSessionTimeout(context: Context) {
+        if (!_sessionActive.value || _state.value is TimerState.Running) return
+        if (!TimerLogic.isSessionExpired(prefs.getLong(K_SESSION_END_AT, 0), System.currentTimeMillis())) return
+        endSession(context)
+    }
+
+    private fun setSession(active: Boolean) {
+        _sessionActive.value = active
+        prefs.edit().putBoolean(K_SESSION, active).apply()
+    }
+
+    private fun sessionTimeoutIntent(context: Context) = PendingIntent.getBroadcast(
+        context, RC_SESSION_TIMEOUT,
+        Intent(context, AlarmReceiver::class.java).setAction(AlarmReceiver.ACTION_SESSION_TIMEOUT),
+        PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
+    )
+
+    private fun cancelSessionTimeout(context: Context) {
+        context.getSystemService(AlarmManager::class.java).cancel(sessionTimeoutIntent(context))
     }
 
     /** 오래된 알림 상태는 대기 화면으로 되돌린다. */

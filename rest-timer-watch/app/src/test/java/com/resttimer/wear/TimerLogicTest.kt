@@ -59,4 +59,12 @@ class TimerLogicTest {
         assertTrue(TimerLogic.shouldIgnoreButton(isAmbient = false, nowUptime = 10_200, lastWakeUptime = 10_000))
         assertFalse(TimerLogic.shouldIgnoreButton(isAmbient = false, nowUptime = 10_600, lastWakeUptime = 10_000))
     }
+
+    @Test
+    fun sessionExpiry() {
+        assertEquals(10 * 60 * 1000L, TimerLogic.SESSION_TIMEOUT_MILLIS)
+        assertFalse(TimerLogic.isSessionExpired(sessionEndAtMillis = 0, nowMillis = 1_000))
+        assertFalse(TimerLogic.isSessionExpired(sessionEndAtMillis = 2_000, nowMillis = 1_000))
+        assertTrue(TimerLogic.isSessionExpired(sessionEndAtMillis = 1_000, nowMillis = 1_000))
+    }
 }
